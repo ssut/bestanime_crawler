@@ -65,6 +65,7 @@ class BestAnime
 
 	def start
 		$index += 1
+		return unless $_anime.find_one({ "bestani_index" => $index }) == nil
 
 		html = Hash.new
 		data = Hash.new
@@ -89,8 +90,10 @@ class BestAnime
 			data['info'] = html['info'].css('table[width="820"] td')[0].content
 			data['synopsys'] = html['synopsys'].css('table[width="820"] td')[0].content
 
-			data['character'] = Array.new
+			data['info'] = "" if data['info'] == '+'
+			data['synopsys'] = "" if data['synopsys'] == '+'
 
+			data['character'] = Array.new
 			html['character'].css('table[width="820"] tr[height="30"]').each do |cont|
 				next if cont.content.to_s.include?('캐릭터') && cont.content.to_s.include?('소개')
 
@@ -123,6 +126,9 @@ class BestAnime
 	end
 
 	def push(index, data)
+		return unless $_anime.find_one({ "bestani_index" => index }) == nil
+		return unless $_anime.find_one({ "title" => data["title"] }) == nil
+
 		_id = $_anime.insert({
 			"title" => data["title"],
 			"title_origin" => data["title_origin"],
@@ -140,6 +146,8 @@ class BestAnime
 			"type" => data["type"],
 			"total_stories" => data["total_stories"],
 			"publish_country" => data["publish_country"],
+			"info" => data["info"],
+			"synopsys" => data["synopsys"],
 			"bestani_index" => index
 		})
 
