@@ -1,11 +1,15 @@
 #encoding: utf-8
 
+require 'open-uri'
+require 'uri'
+require 'mechanize'
+require 'nokogiri'
+
 class BestAnime
 	attr_accessor :data_cnt
 	@@instance = nil
 
 	def initialize
-		# 한글은 "심볼": "내용" 형태로 작성이 안됨
 		@_title = {
 			:"제목" => "title",
 			:"원제" => "title_origin",
@@ -84,22 +88,24 @@ class BestAnime
 
 			poster = html['info'].css('img[width="160px"]')[0]['src']
 			poster_filename = poster.split('/')[-1]
+
+			poster = "http://bestanimation.co.kr" + poster if poster[0] == "/"
 			data['poster'] = poster
 
-			if $config['settings']['get_poster_image'] == 1
+			if poster.include?('no_ani_img.gif') == false && $config['settings']['get_poster_image'] == 1
 				path = "./files/#{index}/"
 				unless File.exists?(path)
 					FileUtils.mkdir_p path
 					FileUtils.chmod 0777, path
 				end
-				poster_stream = File.open(path + poster_filename, 'wb')
+				poster_stream = File.open(path + "poster.jpg", 'wb')
 
 				open(poster) do |stream|
 					poster_stream.write stream.read
 				end
 				poster_stream.close
 
-				data['poster'] = poster_filename
+				data['poster'] = "poster.jpg"
 			end
 
 			html['info'].css('table tr[height="24"]').each do |cont|

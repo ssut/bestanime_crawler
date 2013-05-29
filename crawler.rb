@@ -1,16 +1,13 @@
 #encoding: utf-8
 
 require 'rubygems'
-require 'mechanize'
-require 'nokogiri'
-require 'mongo'
 
 require 'json'
-require 'open-uri'
-require 'uri'
 require 'yaml'
 require 'fileutils'
-require 'thread'
+
+require 'mongo'
+
 require './bestanime.rb'
 include Mongo
 
