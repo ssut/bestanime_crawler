@@ -84,6 +84,26 @@ class BestAnime
 			html['synopsys'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Synopsis.php?Idx=#{index}").body)
 			html['character'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Character.php?Idx=#{index}").body)
 
+			poster = html['info'].css('img[width="160px"]')[0]['src']
+			poster_filename = poster.split('/')[-1]
+			data['poster'] = poster
+
+			if $config['settings']['get_poster_image'] == 1
+				path = "./files/#{index}/"
+				unless File.exists?(path)
+					FileUtils.mkdir_p path
+					FileUtils.chmod 0777, path
+				end
+				poster_stream = File.open(path + poster_filename, 'wb')
+
+				open(poster) do |stream|
+					poster_stream.write stream.read
+				end
+				poster_stream.close
+
+				data['poster'] = poster_filename
+			end
+
 			html['info'].css('table tr[height="24"]').each do |cont|
 				title = cont.css('b')[0].content.to_s.gsub(/\t/, '').strip
 				content = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').strip
@@ -167,6 +187,7 @@ class BestAnime
 			"publish_country" => data["publish_country"],
 			"info" => data["info"],
 			"synopsys" => data["synopsys"],
+			"poster" => data["poster"],
 			"bestani_index" => index
 		})
 
