@@ -123,9 +123,36 @@ class BestAnime
 	end
 
 	def push(index, data)
-		# $coll.insert({
+		_id = $_anime.insert({
+			"title" => data["title"],
+			"title_origin" => data["title_origin"],
+			"title_en" => data["title_en"],
+			"title_sub" => data["title_sub"],
+			"director" => data["director"],
+			"original" => data["original"],
+			"screenplay" => data["screenplay"],
+			"publish" => data["publish"],
+			"copyright" => data["copyright"],
+			"music" => data["music"],
+			"genre" => data["genre"],
+			"year" => data["year"],
+			"ba_stars" => data["ba_stars"],
+			"type" => data["type"],
+			"total_stories" => data["total_stories"],
+			"publish_country" => data["publish_country"],
+			"bestani_index" => index
+		})
 
-		# })
+		data["character"].each do |item|
+			$_character.insert({
+				"anime_id" => _id,
+				"name" => item["name"],
+				"actor" => item["actor"],
+				"desc" => item["desc"],
+				"bestani_index" => index
+			})
+		end
+		
 		p "#{index} : OK : #{data["title"]}"
 	end
 
