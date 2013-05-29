@@ -5,8 +5,6 @@ class BestAnime
 	@@instance = nil
 
 	def initialize
-		@mutex = Mutex.new
-
 		# 한글은 "심볼": "내용" 형태로 작성이 안됨
 		@_title = {
 			:"제목" => "title",
