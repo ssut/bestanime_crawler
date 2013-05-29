@@ -1,9 +1,12 @@
 #encoding: utf-8
 
 class BestAnime
+	attr_accessor :data_cnt
 	@@instance = nil
 
 	def initialize
+		@mutex = Mutex.new
+
 		# 한글은 "심볼": "내용" 형태로 작성이 안됨
 		@_title = {
 			:"제목" => "title",
@@ -63,23 +66,24 @@ class BestAnime
 		end
 	end
 
-	def start
-		$index += 1
-		return unless $_anime.find_one({ "bestani_index" => $index }) == nil
+	def start index
+		return unless $_anime.find_one({ "bestani_index" => index }) == nil
+
+		p "#{@data_cnt} | #{@ani_cnt}"
 
 		html = Hash.new
 		data = Hash.new
 
-		html['info'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Info.php?Idx=#{$index}").body)
-		html['synopsys'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Synopsis.php?Idx=#{$index}").body)
-		html['character'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Character.php?Idx=#{$index}").body)
-
+		html['info'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Info.php?Idx=#{index}").body)
 		if html['info'].to_s.include?('나이체크가 필요한 데이터입니다. 로그인 해주세요.')
 			puts "? BA-R"
 			exit
 		end
 
-		unless html['info'].to_s.include?('데이터가 없습니다.')
+		unless html['info'].to_s.include?("alert('데이터가 없습니다.')")
+			html['synopsys'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Synopsis.php?Idx=#{index}").body)
+			html['character'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Character.php?Idx=#{index}").body)
+
 			html['info'].css('table tr[height="24"]').each do |cont|
 				title = cont.css('b')[0].content.to_s.gsub(/\t/, '').strip
 				content = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').strip
@@ -99,6 +103,23 @@ class BestAnime
 
 				img = cont.css('img')[0]['src']
 				img = "http://bestanimation.co.kr" + img if img[0] == "/"
+
+				img_filename = ''
+				img_filename = img.split('/')[-1] unless img.include?('no_character_img.gif')
+
+				if img.include?('no_character_img.gif') == false && $config['settings']['get_character_image'] == 1
+					path = "./files/#{index}/"
+					unless File.exists?(path)
+						FileUtils.mkdir_p path
+						FileUtils.chmod 0777, path
+					end
+
+					img_stream = File.open(path + img_filename, 'wb')
+					open(img) do |stream|
+						img_stream.write stream.read
+					end
+					img_stream.close
+				end
 				
 				td = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').gsub(/성우 : (.+)/i, '').strip.split("\r")
 				actor = ''
@@ -114,20 +135,18 @@ class BestAnime
 				data['character'].push({
 					'name' => character_name,
 					'actor' => actor,
-					'desc' => desc
+					'desc' => desc,
+					'image' => img_filename
 				})
 			end
-
-			@data_cnt += 1
-			push $index, data
+			push index, data
 		end
 
-		return true if @data_cnt > @ani_cnt
+		return true if @data_cnt >= @ani_cnt
 	end
 
 	def push(index, data)
 		return unless $_anime.find_one({ "bestani_index" => index }) == nil
-		return unless $_anime.find_one({ "title" => data["title"] }) == nil
 
 		_id = $_anime.insert({
 			"title" => data["title"],
@@ -157,10 +176,12 @@ class BestAnime
 				"name" => item["name"],
 				"actor" => item["actor"],
 				"desc" => item["desc"],
+				"image" => item["image"],
 				"bestani_index" => index
 			})
 		end
 		
+		@data_cnt += 1
 		p "#{index} : OK : #{data["title"]}"
 	end
 
