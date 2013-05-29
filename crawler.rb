@@ -18,6 +18,7 @@ include Mongo
 $config = YAML.load(File.read('./config.yml'))
 $client = MongoClient.new('localhost', 27017, :pool_size => 5, :pool_timeout => 5)
 $db = $client['bestanime_crawler']
+$coll = $db['animelist']
 
 $index = 0
 loop do

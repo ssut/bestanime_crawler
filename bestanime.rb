@@ -89,6 +89,32 @@ class BestAnime
 			data['info'] = html['info'].css('table[width="820"] td')[0].content
 			data['synopsys'] = html['synopsys'].css('table[width="820"] td')[0].content
 
+			data['character'] = Array.new
+
+			html['character'].css('table[width="820"] tr[height="30"]').each do |cont|
+				next if cont.content.to_s.include?('캐릭터') && cont.content.to_s.include?('소개')
+
+				img = cont.css('img')[0]['src']
+				img = "http://bestanimation.co.kr" + img if img[0] == "/"
+				
+				td = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').gsub(/성우 : (.+)/i, '').strip.split("\r")
+				actor = ''
+				begin
+					actor = cont.css('td:last-child u')[0].content.to_s.gsub(/\n/, '')
+				rescue
+					actor = ''
+				end
+
+				character_name = td[0].gsub(/\n/, '')
+				td.shift
+				desc = td.join('').gsub(/\n/, '')
+				data['character'].push({
+					'name' => character_name,
+					'actor' => actor,
+					'desc' => desc
+				})
+			end
+
 			@data_cnt += 1
 			push $index, data
 		end
@@ -97,6 +123,9 @@ class BestAnime
 	end
 
 	def push(index, data)
+		# $coll.insert({
+
+		# })
 		p "#{index} : OK : #{data["title"]}"
 	end
 
