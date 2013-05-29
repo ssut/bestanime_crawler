@@ -23,6 +23,24 @@ class BestAnime
 			:"총화수" => "total_stories",
 			:"제작국" => "publish_country"
 		}
+
+		@agent = Mechanize.new
+		@agent.user_agent = 'w3m/0.52'
+		page = @agent.post('http://bestanimation.co.kr/Member/ProcMember.php', {
+			"Method" => "LOGIN",
+			"Email" => $config["user_info"]["email"],
+			"Password" => $config["user_info"]["password"]
+		})
+
+		if page.body.include?("errcode: 1")
+			puts "login failed"
+			exit
+		elsif page.body.include?("errcode: 0")
+			puts "login success"
+
+			@data_cnt = 0
+			@ani_cnt = get_ani_count
+		end
 	end
 
 	def self.instance
@@ -33,24 +51,55 @@ class BestAnime
 		return @@instance
 	end
 
+	def get_ani_count
+		@agent.get("http://bestanimation.co.kr/Library/Animation/Search.php") do |page|
+			html = Nokogiri::HTML(page.content)
+			begin
+				return html.css('font[class="sred"]')[0].content.gsub(',', '').to_i
+			rescue
+				puts "http error"
+				exit
+			end
+		end
+	end
+
 	def start
+		$index += 1
+
 		html = Hash.new
 		data = Hash.new
 
-		html['info'] = Nokogiri::HTML(open("http://bestanimation.co.kr/Library/Animation/Info.php?Idx=#{$index}"))
-		html['synopsys'] = Nokogiri::HTML(open("http://bestanimation.co.kr/Library/Animation/Synopsis.php?Idx=#{$index}"))
-		html['character'] = Nokogiri::HTML(open("http://bestanimation.co.kr/Library/Animation/Character.php?Idx=#{$index}"))
+		html['info'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Info.php?Idx=#{$index}").body)
+		html['synopsys'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Synopsis.php?Idx=#{$index}").body)
+		html['character'] = Nokogiri::HTML(@agent.get("http://bestanimation.co.kr/Library/Animation/Character.php?Idx=#{$index}").body)
 
-		html['info'].css('table tr[height="24"]').each do |cont|
-			title = cont.css('b')[0].content.to_s.gsub(/\t/, '').strip
-			content = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').strip
-		
-			data[@_title[title.to_sym]] = content
+		if html['info'].to_s.include?('나이체크가 필요한 데이터입니다. 로그인 해주세요.')
+			puts "? BA-R"
+			exit
 		end
 
-		data['info'] = html['info'].css('table[width="820"] td')[0].content
-		data['synopsys'] = html['synopsys'].css('table[width="820"] td')[0].content
+		unless html['info'].to_s.include?('데이터가 없습니다.')
+			html['info'].css('table tr[height="24"]').each do |cont|
+				title = cont.css('b')[0].content.to_s.gsub(/\t/, '').strip
+				content = cont.css('td:last-child')[0].content.to_s.gsub(/\t/, '').strip
+
+				data[@_title[title.to_sym]] = content
+			end
+
+			data['info'] = html['info'].css('table[width="820"] td')[0].content
+			data['synopsys'] = html['synopsys'].css('table[width="820"] td')[0].content
+
+			@data_cnt += 1
+			push $index, data
+		end
+
+		return true if @data_cnt > @ani_cnt
+	end
+
+	def push(index, data)
+		p "#{index} : OK : #{data["title"]}"
 	end
 
 	private_class_method :new
+	private :push
 end
