@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+	<title>Finder ;)</title>
+
+	<link rel="stylesheet" href="/style/common.css">
+	<link rel="stylesheet" href="/css/scrollbar.css">
+	<link rel="stylesheet" href="/css/button.css">
+</head>
+<body>
+<!-- import script -->
+<script src="/js/jquery.min.js"></script>
+<!-- // import script -->
+
+<div id="wrap">
+	<div id="context">
+		<section id="search">
+			<header>
+				<h1>
+					<span>
+						<span>Animation</span><br>
+						<span>Search</span>
+					</span>
+				</h1>
+
+				<div>
+					<form method="post" action="#" onsubmit="return anime_search(this)">
+						<fieldset class="search">
+							<legend>Search</legend>
+							<select name="type" class="search_type">
+								<option value="animation">애니메이션</option>
+								<option value="character" disabled>캐릭터</option>
+								<option value="actor" disabled>성우</option>
+							</select>
+
+							<input type="search" id="keyword" name="keyword" placeholder="유루유리" autocomplete="off" x-webkit-speech>
+							<button type="submit" id="go" class="submit">검색</button>
+						</fieldset>
+					</forom>
+				</div>
+			</header>
+			<section id="widget" class="scrollable">
+				<article class="content-box">
+					<h2>데이터 집계</h2>
+					<li><em><%= @anime_cnt %></em> 개의 애니메이션 정보</li>
+					<li><em><%= @character_cnt %></em> 명의 캐릭터 정보</li>
+				</article>
+				<article class="content-box">
+					<h2>관련사이트</h2>
+					<ul>
+						<li><a href="http://gs.saro.me/ani/530" target="_blank">애니메이션 편성표</a></li>
+						<li><a href="http://smidown.com/" target="_blank">애니메이션 자막검색</a></li>
+						<li><a href="http://otaku.pe.kr/" target="_blank">OTAKU.pe.kr</a></li>
+						<li><a href="http://anizone.net/" target="_blank">An!zone</a></li>
+					</ul>
+				</article>
+				<article class="content-box">
+					<h2>애니-일본갤러리 베스트</h2>
+					<ul>
+						<% @ani_jp.each do |item| %>
+						<li><a href="<%= item[:url] %>" target="_blank"><%= item[:title] %></a></li>
+						<% end %>
+					</ul>
+				</article>
+			</section>
+		</section>
+
+	<section id="content" class="scrollable">
+		<div>
+			<h1>검색결과 <span>0개</span></h1>
+			<div id="result">
+			</div>
+		</div>
+	</section>
+</div>
+</div>
+
+<script>//<![CDATA[
+
+	/* iPad Touch Event Control */
+	$(document).on('touchmove',function(e){
+		e.preventDefault();
+	});
+
+	$('body').on('touchstart', '.scrollable', function(e) {
+		if (e.currentTarget.scrollTop === 0) {
+			e.currentTarget.scrollTop = 1;
+		} else if (e.currentTarget.scrollHeight === e.currentTarget.scrollTop + e.currentTarget.offsetHeight) {
+			e.currentTarget.scrollTop -= 1;
+		}
+	});
+
+	$('body').on('touchmove', '.scrollable', function(e) {
+		e.stopPropagation();
+	});
+	/**/
+
+	/* Search */
+	var search_toggle = false;
+	var tpl = '\
+	<div class="anime-box"> \
+	<div class="content"> \
+	<h2>[ANIME_NAME]</h2> \
+	<div> \
+	<span class="image"> \
+	<img src="[ANIME_IMAGE]" alt=""> \
+	</span> \
+	<dl> \
+	<dt>Director</dt> \
+	<dd>[ANIME_DIRECTOR]</dd> \
+	<dt>Publisher</dt> \
+	<dd>[ANIME_PUBLISHER]</dd> \
+	<dt>Genre</dt> \
+	<dd>[ANIME_GENRE]</dd> \
+	<dt>BA-Stars</dt> \
+	<dd>[ANIME_BA]</dd> \
+	<dt>Year</dt> \
+	<dd>[ANIME_YEAR]</dd> \
+	<dt>Description</dt> \
+	<dd>[ANIME_DESC]</dd> \
+	</dl> \
+	</div> \
+	</div> \
+	<div class="button-box clearfix"> \
+	<a href="http://smidown.com/?category=jp_anime&amp;searchWord=[ANIME_NAME_ESCAPE]" target="_blank" class="button">자막 찾아보기</a> \
+	<a href="http://www.youtube.com/results?search_query=[ANIME_NAME_ESCAPE]" target="_blank" class="button">YouTube 검색</a> \
+	<a href="http://tvple.com/video?q=[ANIME_NAME_ESCAPE]" target="_blank" class="button">TVple 검색</a> \
+	<a href="http://mirror.enha.kr/wiki/[ANIME_NAME_ESCAPE]" target="_blank" class="button">엔하미러 검색</a> \
+	</div> \
+	</div>';
+	function anime_search(form) {
+		if(search_toggle == true) return false;
+		if(!form.keyword.value) {
+			alert("검색할 키워드를 입력하세요.");
+			return false;
+		}
+
+		search_toggle = true;
+		$.ajax({
+			url: '/search',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			data: {
+				'type': form.type.value,
+				'keyword': form.keyword.value.trim(),
+				'skip': '0'
+			},
+			beforeSend: function() {
+				$(form.keyword).attr('disabled', 'disabled');
+			},
+			error: function(xhr, stat, err) {
+				alert('오류: ' + xhr.responseText);
+				search_toggle = false;
+				$(form.keyword).removeAttr('disabled');
+			},
+			success: function(data) {
+				if(data.hasOwnProperty('error')) {
+					alert('검색오류');
+				} else if(data.total_count == 0 && data.count == 0) {
+					alert('검색결과가 존재하지 않습니다.');
+				} else {
+					$('#content div h1 span').html(data.total_count + '개');
+					addResult(data.item, 1);
+				}
+
+				search_toggle = false;
+				$(form.keyword).removeAttr('disabled');
+			}
+		});
+
+		return false;
+	}
+
+	function addResult(item, clear) {
+		var result = $('#result'), appends = [];
+		if(clear) result.html('');
+
+		for(var n in item) {
+			var i = item[n];
+			var t = tpl;
+			var idx = i.bestani_index;
+
+			t = t.replace(/\[ANIME_NAME\]/, [ i.title, '(', i.title_en, ' ', i.title_origin ,')' ].join(''))
+				.replace(/\[ANIME_IMAGE\]/, '/anime/' + idx.toString() + '/poster.jpg')
+				.replace(/\[ANIME_DIRECTOR\]/, i.director)
+				.replace(/\[ANIME_PUBLISHER\]/, i.publisher)
+				.replace(/\[ANIME_GENRE\]/, i.genre)
+				.replace(/\[ANIME_BA\]/, i.ba_stars)
+				.replace(/\[ANIME_YEAR\]/, i.year)
+				.replace(/\[ANIME_DESC\]/, cutStr(i.info, 300))
+				.replace(/\[ANIME_NAME_ESCAPE\]/ig, encodeURIComponent(i.title));
+
+			appends.push(t);
+		}
+
+		result.append(appends.join(''));
+	}
+
+	function cutStr(str, limit){
+		var tmpStr = str;
+		var byte_count = 0;
+		var len = str.length;
+		var dot = "";
+
+		for(i = 0; i < len; i++){
+			byte_count += chr_byte(str.charAt(i));
+			if(byte_count == limit-1){
+				if(chr_byte(str.charAt(i + 1)) == 2){
+					tmpStr = str.substring(0, i + 1);
+					dot = "...";
+				}else {
+					if(i + 2 != len) dot = "...";
+					tmpStr = str.substring(0, i + 2);
+				}
+				break;
+			}else if(byte_count == limit){
+				if(i + 1 != len) dot = "...";
+				tmpStr = str.substring(0, i + 1);
+				break;
+			}
+
+		}
+
+		return tmpStr + dot;
+	}
+
+	function chr_byte(chr){
+		if(escape(chr).length > 4)
+			return 2;
+		else
+			return 1;
+	}
+	/**/
+
+//]]></script>
+</body>
+</html>

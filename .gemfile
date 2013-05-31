@@ -1,0 +1,10 @@
+source 'http://rubygems.org'
+
+'sinatra'
+'sinatra-base'
+'sinatra-partial'
+'sinatra-static-assets'
+'less'
+'nokogiri'
+'mechanize'
+'mongo'
