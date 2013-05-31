@@ -1,0 +1,11 @@
+user_info:
+    email: ""
+    password: ""
+
+database:
+    name: "bestanime_crawler"
+
+settings:
+    get_poster_image: 1
+    get_character_image: 1
+
