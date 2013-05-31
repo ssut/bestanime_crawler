@@ -8,7 +8,7 @@ Sinatra::Base.get '/' do
 
 	list.each do |hash|
 		@ani_jp.push({
-			url: "http://gall.dcinside.com/list.php?id=ani1_new1&no=#{hash["no"]}",
+			url: "http://gall.dcinside.com/list.php?id=ani1_new1&no=#{hash["gall_no"]}",
 			title: hash["subject"]
 		})
 	end
