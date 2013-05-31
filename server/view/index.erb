@@ -6,6 +6,7 @@
 	<title>Finder ;)</title>
 
 	<link rel="stylesheet" href="/style/common.css">
+	<link rel="stylesheet" href="/style/mobile.css" media="only screen and (min-device-width : 320px) and (max-device-width : 720px)">
 	<link rel="stylesheet" href="/css/scrollbar.css">
 	<link rel="stylesheet" href="/css/button.css">
 </head>
@@ -70,7 +71,10 @@
 	<section id="content" class="scrollable">
 		<div>
 			<h1>검색결과 <span>0개</span></h1>
-			<div id="result">
+			<div id="result" class="cards">
+			</div>
+			<div id="bottom">
+				<a href="javascript:(function(e){viewMore(e)})(this)" class="button">더보기 (+<span class="more_num">0</span>)</a>
 			</div>
 		</div>
 	</section>
@@ -130,6 +134,12 @@
 	<a href="http://mirror.enha.kr/wiki/[ANIME_NAME_ESCAPE]" target="_blank" class="button">엔하미러 검색</a> \
 	</div> \
 	</div>';
+	var last = {
+		'type': 'animation',
+		'keyword': '',
+		'total': 0,
+		'skip': 0
+	};
 	function anime_search(form) {
 		if(search_toggle == true) return false;
 		if(!form.keyword.value) {
@@ -162,7 +172,18 @@
 				} else if(data.total_count == 0 && data.count == 0) {
 					alert('검색결과가 존재하지 않습니다.');
 				} else {
+					last['type'] = form.type.value;
+					last['keyword'] = form.keyword.value.trim();
+					last['total'] = data.total_count;
+					last['skip'] = data.skip;
+
+					$('#content').css('background-image', 'none');
+					$('#content > div').css('display', 'block');
 					$('#content div h1 span').html(data.total_count + '개');
+					$('#bottom span.more_num').html((data.total_count - data.count - (data.skip - data.count)) + '개');
+					if(last['skip'] >= last['total']) {
+						$('#bottom').fadeOut(50);
+					} else $('#bottom').fadeIn(50);
 					addResult(data.item, 1);
 				}
 
@@ -172,6 +193,49 @@
 		});
 
 		return false;
+	}
+
+	function viewMore(btn) {
+		if(last['skip'] >= last['total_count']) return;
+
+		search_toggle = true;
+		$.ajax({
+			url: '/search',
+			type: 'POST',
+			dataType: 'json',
+			cache: false,
+			data: {
+				'type': last['type'],
+				'keyword': last['keyword'],
+				'skip': new String(last['skip'])
+			},
+			beforeSend: function() {
+				$(btn).attr('disabled', 'disabled');
+			},
+			error: function(xhr, stat, err) {
+				alert('오류: ' + xhr.responseText);
+				search_toggle = false;
+			},
+			success: function(data) {
+				if(data.hasOwnProperty('error')) {
+					alert('검색오류');
+				} else if(data.total_count == 0 && data.count == 0) {
+					alert('검색결과가 존재하지 않습니다.');
+				} else {
+					last['skip'] = data.skip;
+
+					$('#bottom span.more_num').html((data.total_count - data.count - (data.skip - data.count)) + '개');
+					if(last['skip'] >= last['total']) {
+						$('#bottom').fadeOut(50);
+					} else $('#bottom').fadeIn(50);
+
+					addResult(data.item);
+				}
+
+				search_toggle = false;
+				$(btn).removeAttr('disabled');
+			}
+		});
 	}
 
 	function addResult(item, clear) {
@@ -197,6 +261,7 @@
 		}
 
 		result.append(appends.join(''));
+		if(clear && $('#content').scrollTop() > 0) $('#content').animate({ scrollTop: 0 }, 600);
 	}
 
 	function cutStr(str, limit){

@@ -42,9 +42,9 @@ Sinatra::Base.post '/search' do
 	if type == 'animation'
 		data = $_anime.find({
 			:$or => [
-				{ :title =>  Regexp.new(keyword) },
-				{ :title_en => Regexp.new(keyword) },
-				{ :title_orign => Regexp.new(keyword) }
+				{ :title =>  Regexp.new(Regexp.escape(keyword), Regexp::IGNORECASE) },
+				{ :title_en => Regexp.new(Regexp.escape(keyword), Regexp::IGNORECASE) },
+				{ :title_orign => Regexp.new(Regexp.escape(keyword), Regexp::IGNORECASE) }
 			]
 			}).sort({
 				:bestani_index => :desc
@@ -69,6 +69,9 @@ Sinatra::Base.post '/search' do
 
 			result['item'].push hash
 		end
+
+		result['skip'] = skip + 10
+		result['skip'] = result['total_count'] if result['skip'] >= result['total_count']
 
 		JSON.generate(result)
 	end

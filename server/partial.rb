@@ -4,6 +4,10 @@ Sinatra::Base.get '/style/common.css' do
 	less :"../public/common"
 end
 
+Sinatra::Base.get '/style/mobile.css' do
+	less :"../public/mobile"
+end
+
 Sinatra::Base.get '/anime/:id/poster.jpg' do
 	poster = $root + "/files/#{params[:id]}/poster.jpg"
 	puts params[:id]
